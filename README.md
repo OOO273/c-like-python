@@ -141,3 +141,70 @@ cpy.py 的核心逻辑如下：
 注意：转换器不识别字符串、字典/集合/f-string、注释。出现在它们内部的 `;`、`{`、`}`、`$`
 必须用 `$;`、`${`、`$}`、`$$` 转义。注释也需用真实的 `;` 结尾来换行（不能依赖物理换行，
 否则下一行会因“换行→空格”被并入注释）。空代码块需由程序员自行写 `pass`。
+
+---
+
+# cpy3.py — alternative converter where `{` also breaks the line
+
+`cpy3.py` is a second converter. The original `cpy.py` is kept unchanged and still
+follows the rules in section 2. `cpy3.py` differs from `cpy.py` in exactly **one** rule:
+the handling of an ordinary `{`.
+
+- `cpy.py`  : `{` only increases the indent count by 1 (no newline), so a block header
+  must be written as `if a:; { ... }`.
+- `cpy3.py` : `{` increases the indent count by 1 **and** outputs a newline; **but** if it
+  is already at line start (for example, a preceding `;` has just broken the line), it only
+  adds indentation and does **not** break the line again, to avoid extra blank lines.
+
+So with `cpy3.py` you can write `if a: { ... }` directly — the `{` produces the newline
+after `if a:`. An ordinary `;` always breaks the line (even at line start), because that is
+considered an intentional line break by the programmer.
+
+**This rule is backward compatible with the old syntax.** Writing `if a:; { ... }` still
+produces the correct result with no extra blank line: after `;` breaks the line we are at
+line start, so the following `{` only adds indent and does not break the line again.
+
+**Important rule (must follow):** `}` does **not** end a statement and does **not** break the
+line — it only decreases the indent count. Therefore **every statement, including the last one
+before a `}`, must end with `;`.** For example `{ a(); b(); }` — the final `b()` must also be
+followed by `;`. Otherwise the next statement after `}` would be glued onto the same line.
+
+`}` is unchanged: it only decreases the indent count (no character output, no newline).
+All other rules (`;`, escapes `${ $} $; $$`, strings/dicts/comments needing escapes,
+4-space indent, `pass` for empty blocks) are identical to `cpy.py`.
+
+Usage is the same:
+
+```
+python cpy3.py abc.cpy
+```
+
+---
+
+# cpy3.py —— 让 `{` 也换行的另一个转换器
+
+`cpy3.py` 是第二个转换器。原 `cpy.py` 保留不变，仍按第 2 节的规则工作。`cpy3.py` 与
+`cpy.py` 的区别**仅有一条**：普通 `{` 的处理。
+
+- `cpy.py`  ：`{` 只把缩进计数加 1（不换行），所以块头必须写成 `if a:; { ... }`。
+- `cpy3.py` ：`{` 把缩进计数加 1，**并且换行**；**但**如果此时已处于行首（例如前面的 `;`
+  刚刚换过行），就只增加缩进、**不再换行**，以避免产生多余的空白行。
+
+因此用 `cpy3.py` 可以直接写 `if a: { ... }`——由 `{` 产生 `if a:` 之后的换行。而普通 `;`
+必然换行（即使在行首），因为认为这是程序员有意的换行。
+
+**该规则向后兼容老语法。** 写 `if a:; { ... }` 仍然得到正确结果、且没有多余空行：`;`
+换行后已处于行首，于是其后的 `{` 只加缩进、不再换行。
+
+**重要约定（必须遵守）：** `}` **不结束语句**、**也不换行**，它只把缩进计数减 1。因此
+**每一条语句（包括 `}` 之前的最后一条）都必须以 `;` 结尾。** 例如 `{ a(); b(); }`——
+最后的 `b()` 后面同样要有 `;`。否则 `}` 之后的下一条语句会被拼接到同一行上。
+
+`}` 保持不变：只把缩进计数减 1（不输出字符、不换行）。其余所有规则（`;`、转义
+`${ $} $; $$`、字符串/字典/注释需要转义、4 空格缩进、空块写 `pass`）都与 `cpy.py` 相同。
+
+用法相同：
+
+```
+python cpy3.py abc.cpy
+```
